@@ -44,10 +44,16 @@ THREE.TransformControls = function ( camera, domElement ) {
 	var _tempVector = new THREE.Vector3();
 	var _tempVector2 = new THREE.Vector3();
 	var _tempQuaternion = new THREE.Quaternion();
+	var vecX = new THREE.Vector3( 1, 0, 0 );
+	var vecY = new THREE.Vector3( 0, 1, 0 );
+	var vecZ = new THREE.Vector3( 0, 0, 1 );
 	var _unit = {
-		X: new THREE.Vector3( 1, 0, 0 ),
-		Y: new THREE.Vector3( 0, 1, 0 ),
-		Z: new THREE.Vector3( 0, 0, 1 )
+		X: vecX,
+		Y: vecY,
+		Z: vecZ,
+		rX: vecX,
+		rY: vecY,
+		rZ: vecZ
 	}
 	var _identityQuaternion = new THREE.Quaternion();
 	var _alignVector = new THREE.Vector3();
@@ -252,6 +258,10 @@ THREE.TransformControls = function ( camera, domElement ) {
 
 					space = 'world';
 
+				} else if ( this.axis === 'rE' ||  this.axis === 'rXYZE') {
+
+					space = 'world';
+
 				}
 
 				if ( space === 'local' && this.mode === 'rotate' ) {
@@ -263,6 +273,17 @@ THREE.TransformControls = function ( camera, domElement ) {
 					if ( this.axis === 'Z' && snap ) this.object.rotation.z = Math.round( this.object.rotation.z / snap ) * snap;
 
 				}
+
+				if ( space === 'local' && this.mode === 'translateRotate' ) {
+
+					var snap = this.rotationSnap;
+
+					if ( this.axis === 'rX' && snap ) this.object.rotation.x = Math.round( this.object.rotation.x / snap ) * snap;
+					if ( this.axis === 'rY' && snap ) this.object.rotation.y = Math.round( this.object.rotation.y / snap ) * snap;
+					if ( this.axis === 'rZ' && snap ) this.object.rotation.z = Math.round( this.object.rotation.z / snap ) * snap;
+
+				}
+
 
 				this.object.updateMatrixWorld();
 				this.object.parent.updateMatrixWorld();
@@ -299,6 +320,10 @@ THREE.TransformControls = function ( camera, domElement ) {
 			space = 'local';
 
 		} else if ( axis === 'E' ||  axis === 'XYZE' ||  axis === 'XYZ' ) {
+
+			space = 'world';
+
+		} else if ( axis === 'rE' ||  axis === 'rXYZE' ) {
 
 			space = 'world';
 
@@ -474,8 +499,138 @@ THREE.TransformControls = function ( camera, domElement ) {
 
 			}
 
-		}
+		} else if ( mode === 'translateRotate' ) {
+			if ( axis[0] !== 'r' ) {
+				if ( axis.search( 'X' ) === -1 ) {
+					pointEnd.x = pointStart.x;
+				}
+				if ( axis.search( 'Y' ) === -1 ) {
+					pointEnd.y = pointStart.y;
+				}
+				if ( axis.search( 'Z' ) === -1 ) {
+					pointEnd.z = pointStart.z;
+				}
 
+				// Apply translate
+
+				if ( space === 'local' ) {
+					object.position.copy( pointEnd ).sub( pointStart ).applyQuaternion( _quaternionStart );
+				} else {
+					object.position.copy( pointEnd ).sub( pointStart );
+				}
+
+				object.position.add( _positionStart );
+
+				// Apply translation snap
+
+				if ( this.translationSnap ) {
+
+					if ( space === 'local' ) {
+
+						object.position.applyQuaternion(_tempQuaternion.copy( _quaternionStart ).inverse() );
+
+						if ( axis.search( 'X' ) !== -1 ) {
+							object.position.x = Math.round( object.position.x / this.translationSnap ) * this.translationSnap;
+						}
+
+						if ( axis.search( 'Y' ) !== -1 ) {
+							object.position.y = Math.round( object.position.y / this.translationSnap ) * this.translationSnap;
+						}
+
+						if ( axis.search( 'Z' ) !== -1 ) {
+							object.position.z = Math.round( object.position.z / this.translationSnap ) * this.translationSnap;
+						}
+
+						object.position.applyQuaternion( _quaternionStart );
+
+					}
+
+					if ( space === 'world' ) {
+
+						if ( object.parent ) {
+							object.position.add( _tempVector.setFromMatrixPosition( object.parent.matrixWorld ) );
+						}
+
+						if ( axis.search( 'X' ) !== -1 ) {
+							object.position.x = Math.round( object.position.x / this.translationSnap ) * this.translationSnap;
+						}
+
+						if ( axis.search( 'Y' ) !== -1 ) {
+							object.position.y = Math.round( object.position.y / this.translationSnap ) * this.translationSnap;
+						}
+
+						if ( axis.search( 'Z' ) !== -1 ) {
+							object.position.z = Math.round( object.position.z / this.translationSnap ) * this.translationSnap;
+						}
+
+						if ( object.parent ) {
+							object.position.sub( _tempVector.setFromMatrixPosition( object.parent.matrixWorld ) );
+						}
+
+					}
+
+				}
+			} else {
+
+				var ROTATION_SPEED = 20 / worldPosition.distanceTo( _tempVector.setFromMatrixPosition( this.camera.matrixWorld ) );
+
+				var quaternion = this.space === "local" ? worldQuaternion : _identityQuaternion;
+
+				var unit = _unit[ axis ];
+
+				if ( axis === 'rE' ) {
+
+					_tempVector.copy( pointEnd ).cross( pointStart );
+					rotationAxis.copy( eye );
+					rotationAngle = pointEnd.angleTo( pointStart ) * ( _tempVector.dot( eye ) < 0 ? 1 : -1 );
+
+				} else if ( axis === 'rXYZE' ) {
+
+					_tempVector.copy( pointEnd ).sub( pointStart ).cross( eye ).normalize();
+					rotationAxis.copy( _tempVector );
+					rotationAngle = pointEnd.sub( pointStart ).dot( _tempVector.cross( eye ) ) * ROTATION_SPEED;
+
+				} else if ( axis === 'rX' || axis === 'rY' || axis === 'rZ' ) {
+
+					_alignVector.copy( unit ).applyQuaternion( quaternion );
+
+					rotationAxis.copy( unit );
+
+					_tempVector = unit.clone();
+					_tempVector2 = pointEnd.clone().sub( pointStart );
+					if ( space === 'local' ) {
+						_tempVector.applyQuaternion( quaternion );
+						_tempVector2.applyQuaternion( worldQuaternionStart );
+					}
+					rotationAngle = _tempVector2.dot( _tempVector.cross( eye ).normalize() ) * ROTATION_SPEED;
+
+				}
+
+				// Apply rotation snap
+
+				if ( this.rotationSnap ) rotationAngle = Math.round( rotationAngle / this.rotationSnap ) * this.rotationSnap;
+
+				this.rotationAngle = rotationAngle;
+
+				// Apply rotate
+
+				if ( space === 'local' ) {
+
+					object.quaternion.copy( _quaternionStart );
+					object.quaternion.multiply( _tempQuaternion.setFromAxisAngle( rotationAxis, rotationAngle ) );
+
+				} else {
+
+					object.quaternion.copy( _tempQuaternion.setFromAxisAngle( rotationAxis, rotationAngle ) );
+					object.quaternion.multiply( _quaternionStart );
+
+				}
+
+			}
+
+
+		}
+		// console.warn(axis);
 		this.dispatchEvent( changeEvent );
 		this.dispatchEvent( objectChangeEvent );
 
@@ -736,6 +891,137 @@ THREE.TransformControlsGizmo = function () {
 	};
 
 	// Gizmo definitions - custom hierarchy definitions for setupGizmo() function
+
+	var gizmoTranslateRotate = {
+
+		X: [
+			[ new THREE.Mesh( arrowGeometry, matRed.clone() ), [ 1.5, 0, 0 ], [ 0, 0, -Math.PI / 2 ], null, 'fwd' ],
+			[ new THREE.Mesh( arrowGeometry, matRed.clone() ), [ 1.5, 0, 0 ], [ 0, 0, Math.PI / 2 ], null, 'bwd' ],
+			[ new THREE.Line( lineGeometry, matLineRed.clone() ), null, null, [1.5, 0, 0] ]
+		],
+		Y: [
+			[ new THREE.Mesh( arrowGeometry, matGreen.clone() ), [ 0, 1.5, 0 ], null, null, 'fwd' ],
+			[ new THREE.Mesh( arrowGeometry, matGreen.clone() ), [ 0, 1.5, 0 ], [ Math.PI, 0, 0 ], null, 'bwd' ],
+			[ new THREE.Line( lineGeometry, matLineGreen.clone() ), null, [ 0, 0, Math.PI / 2 ], [1.5, 0, 0] ]
+		],
+		Z: [
+			[ new THREE.Mesh( arrowGeometry, matBlue.clone() ), [ 0, 0, 1.5 ], [ Math.PI / 2, 0, 0 ], null, 'fwd' ],
+			[ new THREE.Mesh( arrowGeometry, matBlue.clone() ), [ 0, 0, 1.5 ], [ -Math.PI / 2, 0, 0 ], null, 'bwd' ],
+			[ new THREE.Line( lineGeometry, matLineBlue.clone() ), null, [ 0, -Math.PI / 2, 0 ], [1.5, 0, 0] ]
+		],
+		XYZ: [
+			[ new THREE.Mesh( new THREE.OctahedronBufferGeometry( 0.1, 0 ), matWhiteTransperent.clone() ), [ 0, 0, 0 ], [ 0, 0, 0 ] ]
+		],
+		XY: [
+			[ new THREE.Mesh( new THREE.PlaneBufferGeometry( 0.295, 0.295 ), matYellowTransparent.clone() ), [ 0.15, 0.15, 0 ] ],
+			[ new THREE.Line( lineGeometry, matLineYellow.clone() ), [ 0.18, 0.3, 0 ], null, [ 0.125, 1, 1 ] ],
+			[ new THREE.Line( lineGeometry, matLineYellow.clone() ), [ 0.3, 0.18, 0 ], [ 0, 0, Math.PI / 2 ], [ 0.125, 1, 1 ] ]
+		],
+		YZ: [
+			[ new THREE.Mesh( new THREE.PlaneBufferGeometry( 0.295, 0.295 ), matCyanTransparent.clone() ), [ 0, 0.15, 0.15 ], [ 0, Math.PI / 2, 0 ] ],
+			[ new THREE.Line( lineGeometry, matLineCyan.clone() ), [ 0, 0.18, 0.3 ], [ 0, 0, Math.PI / 2 ], [ 0.125, 1, 1 ] ],
+			[ new THREE.Line( lineGeometry, matLineCyan.clone() ), [ 0, 0.3, 0.18 ], [ 0, -Math.PI / 2, 0 ], [ 0.125, 1, 1 ] ]
+		],
+		XZ: [
+			[ new THREE.Mesh( new THREE.PlaneBufferGeometry( 0.295, 0.295 ), matMagentaTransparent.clone() ), [ 0.15, 0, 0.15 ], [ -Math.PI / 2, 0, 0 ] ],
+			[ new THREE.Line( lineGeometry, matLineMagenta.clone() ), [ 0.18, 0, 0.3 ], null, [ 0.125, 1, 1 ] ],
+			[ new THREE.Line( lineGeometry, matLineMagenta.clone() ), [ 0.3, 0, 0.18 ], [ 0, -Math.PI / 2, 0 ], [ 0.125, 1, 1 ] ]
+		],
+
+
+		rX: [
+			[ new THREE.Line( CircleGeometry( 1, 0.5 ), matLineRed.clone() ) ]
+		],
+		rY: [
+			[ new THREE.Line( CircleGeometry( 1, 0.5 ), matLineGreen.clone() ), null, [ 0, 0, -Math.PI / 2 ] ]
+		],
+		rZ: [
+			[ new THREE.Line( CircleGeometry( 1, 0.5 ), matLineBlue.clone() ), null, [ 0, Math.PI / 2, 0 ] ]
+		],
+		// rE: [
+		// 	[ new THREE.Line( CircleGeometry( 1.25, 1 ), matLineYellowTransparent ), null, [ 0, Math.PI / 2, 0 ] ],
+		// 	[ new THREE.Mesh( new THREE.CylinderBufferGeometry( 0.03, 0, 0.15, 4, 1, false ), matLineYellowTransparent ), [ 1.17, 0, 0 ], [ 0, 0, -Math.PI / 2 ], [ 1, 1, 0.001 ]],
+		// 	[ new THREE.Mesh( new THREE.CylinderBufferGeometry( 0.03, 0, 0.15, 4, 1, false ), matLineYellowTransparent ), [ -1.17, 0, 0 ], [ 0, 0, Math.PI / 2 ], [ 1, 1, 0.001 ]],
+		// 	[ new THREE.Mesh( new THREE.CylinderBufferGeometry( 0.03, 0, 0.15, 4, 1, false ), matLineYellowTransparent ), [ 0, -1.17, 0 ], [ Math.PI, 0, 0 ], [ 1, 1, 0.001 ]],
+		// 	[ new THREE.Mesh( new THREE.CylinderBufferGeometry( 0.03, 0, 0.15, 4, 1, false ), matLineYellowTransparent ), [ 0, 1.17, 0 ], [ 0, 0, 0 ], [ 1, 1, 0.001 ]],
+		// ],
+		// rXYZE: [
+		// 	[ new THREE.Line( CircleGeometry( 1, 1 ), matLineGray ), null, [ 0, Math.PI / 2, 0 ] ]
+		// ]
+
+
+	}
+
+	var helperTranslateRotate = {
+
+		START: [
+			[ new THREE.Mesh( new THREE.OctahedronBufferGeometry( 0.01, 2 ), matHelper ), null, null, null, 'helper' ]
+		],
+		END: [
+			[ new THREE.Mesh( new THREE.OctahedronBufferGeometry( 0.01, 2 ), matHelper ), null, null, null, 'helper' ]
+		],
+		DELTA: [
+			[ new THREE.Line( TranslateHelperGeometry(), matHelper ), null, null, null, 'helper' ]
+		],
+		X: [
+			[ new THREE.Line( lineGeometry, matHelper.clone() ), [ -1e3, 0, 0 ], null, [ 1e6, 1, 1 ], 'helper' ]
+		],
+		Y: [
+			[ new THREE.Line( lineGeometry, matHelper.clone() ), [ 0, -1e3, 0 ], [ 0, 0, Math.PI / 2 ], [ 1e6, 1, 1 ], 'helper' ]
+		],
+		Z: [
+			[ new THREE.Line( lineGeometry, matHelper.clone() ), [ 0, 0, -1e3 ], [ 0, -Math.PI / 2, 0 ], [ 1e6, 1, 1 ], 'helper' ]
+		],
+
+
+		// AXIS: [
+		// 	[ new THREE.Line( lineGeometry, matHelper.clone() ), [ -1e3, 0, 0 ], null, [ 1e6, 1, 1 ], 'helper' ]
+		// ]
+
+	}
+
+	var pickerTranslateRotate = {
+
+		X: [
+			[ new THREE.Mesh( new THREE.CylinderBufferGeometry( 0.2, 0, 2, 4, 1, false ), matInvisible ), [ 0.6, 0, 0 ], [ 0, 0, -Math.PI / 2 ] ]
+		],
+		Y: [
+			[ new THREE.Mesh( new THREE.CylinderBufferGeometry( 0.2, 0, 2, 4, 1, false ), matInvisible ), [ 0, 0.6, 0 ] ]
+		],
+		Z: [
+			[ new THREE.Mesh( new THREE.CylinderBufferGeometry( 0.2, 0, 2, 4, 1, false ), matInvisible ), [ 0, 0, 0.6 ], [ Math.PI / 2, 0, 0 ] ]
+		],
+		XYZ: [
+			[ new THREE.Mesh( new THREE.OctahedronBufferGeometry( 0.2, 0 ), matInvisible ) ]
+		],
+		XY: [
+			[ new THREE.Mesh( new THREE.PlaneBufferGeometry( 0.4, 0.4 ), matInvisible ), [ 0.2, 0.2, 0 ] ]
+		],
+		YZ: [
+			[ new THREE.Mesh( new THREE.PlaneBufferGeometry( 0.4, 0.4 ), matInvisible ), [ 0, 0.2, 0.2 ], [ 0, Math.PI / 2, 0 ] ]
+		],
+		XZ: [
+			[ new THREE.Mesh( new THREE.PlaneBufferGeometry( 0.4, 0.4 ), matInvisible ), [ 0.2, 0, 0.2 ], [ -Math.PI / 2, 0, 0 ] ]
+		],
+
+
+		rX: [
+			[ new THREE.Mesh( new THREE.TorusBufferGeometry( 1, 0.1, 4, 24 ), matInvisible ), [ 0, 0, 0 ], [ 0, -Math.PI / 2, -Math.PI / 2 ] ],
+		],
+		rY: [
+			[ new THREE.Mesh( new THREE.TorusBufferGeometry( 1, 0.1, 4, 24 ), matInvisible ), [ 0, 0, 0 ], [ Math.PI / 2, 0, 0 ] ],
+		],
+		rZ: [
+			[ new THREE.Mesh( new THREE.TorusBufferGeometry( 1, 0.1, 4, 24 ), matInvisible ), [ 0, 0, 0 ], [ 0, 0, -Math.PI / 2 ] ],
+		],
+		// rE: [
+		// 	[ new THREE.Mesh( new THREE.TorusBufferGeometry( 1.25, 0.1, 2, 24 ), matInvisible ) ]
+		// ],
+		// rXYZE: [
+		// 	[ new THREE.Mesh( new THREE.SphereBufferGeometry( 0.7, 10, 8 ), matInvisible ) ]
+		// ]
+
+	}
 
 	var gizmoTranslate = {
 		X: [
@@ -1013,6 +1299,10 @@ THREE.TransformControlsGizmo = function () {
 	var unitY = new THREE.Vector3( 0, 1, 0 );
 	var unitZ = new THREE.Vector3( 0, 0, 1 );
 
+	var unitrX = new THREE.Vector3( 1, 0, 0 );
+	var unitrY = new THREE.Vector3( 0, 1, 0 );
+	var unitrZ = new THREE.Vector3( 0, 0, 1 );
+
 	// Gizmo creation
 
 	this.gizmo = {};
@@ -1029,11 +1319,17 @@ THREE.TransformControlsGizmo = function () {
 	this.add( this.helper[ "rotate" ] = setupGizmo( helperRotate ) );
 	this.add( this.helper[ "scale" ] = setupGizmo( helperScale ) );
 
+	this.add( this.gizmo[ "translateRotate" ] = setupGizmo( gizmoTranslateRotate ) );
+	this.add( this.picker[ "translateRotate" ] = setupGizmo( pickerTranslateRotate ) );
+	this.add( this.helper[ "translateRotate" ] = setupGizmo( helperTranslateRotate ) );
+
 	// Pickers should be hidden always
 
 	this.picker[ "translate" ].visible = false;
 	this.picker[ "rotate" ].visible = false;
 	this.picker[ "scale" ].visible = false;
+
+	this.picker[ "translateRotate" ].visible = false;
 
 	// updateMatrixWorld will update transformations and appearance of individual handles
 
@@ -1051,10 +1347,13 @@ THREE.TransformControlsGizmo = function () {
 		this.gizmo[ "rotate" ].visible = this.mode === "rotate";
 		this.gizmo[ "scale" ].visible = this.mode === "scale";
 
+		this.gizmo[ "translateRotate" ].visible = this.mode === "translateRotate";
+
 		this.helper[ "translate" ].visible = this.mode === "translate";
 		this.helper[ "rotate" ].visible = this.mode === "rotate";
 		this.helper[ "scale" ].visible = this.mode === "scale";
 
+		this.helper[ "translateRotate" ].visible = this.mode === "translateRotate";
 
 		var handles = [];
 		handles = handles.concat( this.picker[ this.mode ].children );
@@ -1305,10 +1604,131 @@ THREE.TransformControlsGizmo = function () {
 
 				}
 
+			} else if ( this.mode === 'translateRotate' ) {
+				if ( handle.name[0] !== 'r' ) {
+					// Hide translate and scale axis facing the camera
+
+					var AXIS_HIDE_TRESHOLD = 0.99;
+					var PLANE_HIDE_TRESHOLD = 0.2;
+					var AXIS_FLIP_TRESHOLD = -0.4;
+
+					if ( handle.name === 'X' || handle.name === 'XYZX' ) {
+						if ( Math.abs( alignVector.copy( unitX ).applyQuaternion( quaternion ).dot( this.eye ) ) > AXIS_HIDE_TRESHOLD ) {
+							handle.scale.set( 1e-10, 1e-10, 1e-10 );
+							handle.visible = false;
+						}
+					}
+					if ( handle.name === 'Y' || handle.name === 'XYZY' ) {
+						if ( Math.abs( alignVector.copy( unitY ).applyQuaternion( quaternion ).dot( this.eye ) ) > AXIS_HIDE_TRESHOLD ) {
+							handle.scale.set( 1e-10, 1e-10, 1e-10 );
+							handle.visible = false;
+						}
+					}
+					if ( handle.name === 'Z' || handle.name === 'XYZZ' ) {
+						if ( Math.abs( alignVector.copy( unitZ ).applyQuaternion( quaternion ).dot( this.eye ) ) > AXIS_HIDE_TRESHOLD ) {
+							handle.scale.set( 1e-10, 1e-10, 1e-10 );
+							handle.visible = false;
+						}
+					}
+					if ( handle.name === 'XY' ) {
+						if ( Math.abs( alignVector.copy( unitZ ).applyQuaternion( quaternion ).dot( this.eye ) ) < PLANE_HIDE_TRESHOLD ) {
+							handle.scale.set( 1e-10, 1e-10, 1e-10 );
+							handle.visible = false;
+						}
+					}
+					if ( handle.name === 'YZ' ) {
+						if ( Math.abs( alignVector.copy( unitX ).applyQuaternion( quaternion ).dot( this.eye ) ) < PLANE_HIDE_TRESHOLD ) {
+							handle.scale.set( 1e-10, 1e-10, 1e-10 );
+							handle.visible = false;
+						}
+					}
+					if ( handle.name === 'XZ' ) {
+						if ( Math.abs( alignVector.copy( unitY ).applyQuaternion( quaternion ).dot( this.eye ) ) < PLANE_HIDE_TRESHOLD ) {
+							handle.scale.set( 1e-10, 1e-10, 1e-10 );
+							handle.visible = false;
+						}
+					}
+
+					// Flip translate and scale axis ocluded behind another axis
+
+					if ( handle.name.search( 'X' ) !== -1 ) {
+						if ( alignVector.copy( unitX ).applyQuaternion( quaternion ).dot( this.eye ) < AXIS_FLIP_TRESHOLD ) {
+							if ( handle.tag === 'fwd' ) {
+								handle.visible = false;
+							} else {
+								handle.scale.x *= -1;
+							}
+						} else if ( handle.tag === 'bwd' ) {
+							handle.visible = false;
+						}
+					}
+
+					if ( handle.name.search( 'Y' ) !== -1 ) {
+						if ( alignVector.copy( unitY ).applyQuaternion( quaternion ).dot( this.eye ) < AXIS_FLIP_TRESHOLD ) {
+							if ( handle.tag === 'fwd' ) {
+								handle.visible = false;
+							} else {
+								handle.scale.y *= -1;
+							}
+						} else if ( handle.tag === 'bwd' ) {
+							handle.visible = false;
+						}
+					}
+
+					if ( handle.name.search( 'Z' ) !== -1 ) {
+						if ( alignVector.copy( unitZ ).applyQuaternion( quaternion ).dot( this.eye ) < AXIS_FLIP_TRESHOLD ) {
+							if ( handle.tag === 'fwd' ) {
+								handle.visible = false;
+							} else {
+								handle.scale.z *= -1;
+							}
+						} else if ( handle.tag === 'bwd' ) {
+							handle.visible = false;
+						}
+					}
+
+				}
+
+				// ROTATE
+				// Align handles to current local or world rotation
+
+				tempQuaternion2.copy( quaternion );
+				alignVector.copy( this.eye ).applyQuaternion( tempQuaternion.copy( quaternion ).inverse() );
+
+				if ( handle.name.search( "rE" ) !== - 1 ) {
+
+					handle.quaternion.setFromRotationMatrix( lookAtMatrix.lookAt( this.eye, zeroVector, unitY ) );
+
+				}
+
+				if ( handle.name === 'rX' ) {
+
+					tempQuaternion.setFromAxisAngle( unitrX, Math.atan2( -alignVector.y, alignVector.z ) );
+					tempQuaternion.multiplyQuaternions( tempQuaternion2, tempQuaternion );
+					handle.quaternion.copy( tempQuaternion );
+
+				}
+
+				if ( handle.name === 'rY' ) {
+
+					tempQuaternion.setFromAxisAngle( unitrY, Math.atan2( alignVector.x, alignVector.z ) );
+					tempQuaternion.multiplyQuaternions( tempQuaternion2, tempQuaternion );
+					handle.quaternion.copy( tempQuaternion );
+
+				}
+
+				if ( handle.name === 'rZ' ) {
+
+					tempQuaternion.setFromAxisAngle( unitrZ, Math.atan2( alignVector.y, alignVector.x ) );
+					tempQuaternion.multiplyQuaternions( tempQuaternion2, tempQuaternion );
+					handle.quaternion.copy( tempQuaternion );
+
+				}
+
+
 			}
 
 			// highlight selected axis
-
 			handle.material._opacity = handle.material._opacity || handle.material.opacity;
 			handle.material._color = handle.material._color || handle.material.color.clone();
 
@@ -1322,7 +1742,7 @@ THREE.TransformControlsGizmo = function () {
 					handle.material.opacity = 1.0;
 					handle.material.color.lerp( new THREE.Color( 1, 1, 1 ), 0.5 );
 
-				} else if ( this.axis.split('').some( function( a ) { return handle.name === a; } ) ) {
+				} else if ( this.axis[0] !== 'r' && this.axis.split('').some( function( a ) { return handle.name === a; } ) ) {
 
 					handle.material.opacity = 1.0;
 					handle.material.color.lerp( new THREE.Color( 1, 1, 1 ), 0.5 );
