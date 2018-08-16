@@ -31,7 +31,7 @@ function SpotLightHelper( light, color, camera, domElement = document ) {
 	var geometry = new BufferGeometry();
 
 	var ray = new THREE.Raycaster();
-	ray.params.Points.threshold = 0.1;
+	ray.params.Points.threshold = 1;
 
 	var positions = [
 		0, 0, 0, 	0, 0, 1,
@@ -69,31 +69,58 @@ function SpotLightHelper( light, color, camera, domElement = document ) {
 	// Add handlers
 
 	var angleHandlePositions = [
-		// 0, 0, 1,
-		1, 0, 1,
-		- 1, 0, 1,
-		0, 1, 1,
-		0, - 1, 1
+		[1, 0, 1],
+		[- 1, 0, 1],
+		[0, 1, 1],
+		[0, - 1, 1]
 	];
 
-	var angleHandleGeometry = new BufferGeometry();
-	angleHandleGeometry.addAttribute( 'position', new Float32BufferAttribute( angleHandlePositions, 3 ));
 
-	var angleHandleMaterial = new PointsMaterial( { color: 0xFFFF00, size: 6.0, sizeAttenuation: false } );
-	this.angleHandle = new THREE.Points( angleHandleGeometry, angleHandleMaterial );
-	this.angleHandle.name = 'angleHandler';
+	var handleMaterial = new PointsMaterial( { color: 0xFFFF00, size: 6.0, sizeAttenuation: false } );
 
-	this.cone.add( this.angleHandle )
 
+	var distHandlePositions = [
+		0, 0, 1
+	];
+	var distHandleGeometry = new BufferGeometry();
+	distHandleGeometry.addAttribute( 'position', new Float32BufferAttribute( distHandlePositions, 3 ));
+
+	this.distHandle = new THREE.Points( distHandleGeometry, handleMaterial );
+	this.distHandle.name = 'distHandler';
+
+	// this.distHandle.add( this.angleHandle );
+	this.cone.add( this.distHandle );
+
+	// this.angleHandle = new THREE.Points( angleHandleGeometry, angleHandleMaterial );
+	// this.angleHandle.name = 'angleHandler';
+
+	for(let pos of angleHandlePositions) {
+		let geom = new BufferGeometry();
+		geom.addAttribute( 'position', new Float32BufferAttribute( pos, 3 ));
+		let handle = new THREE.Points( geom, handleMaterial );
+		handle.name = 'angleHandler';
+
+		this.distHandle.add( handle );
+
+	}
 
 
 	// Add plane
 	let planeBuffer = new THREE.PlaneBufferGeometry( 100000, 100000, 2, 2 );
-	let planeShader = new THREE.MeshBasicMaterial( { visible: true, wireframe: true, side: THREE.DoubleSide, transparent: true, opacity: 0.1 } )
-	let plane = new THREE.Mesh(planeBuffer, planeShader);
-	plane.position.set(0, 0, 1);
-	this.cone.add(plane);
+	let planeShader = new THREE.MeshBasicMaterial( { visible: false, wireframe: true, side: THREE.DoubleSide, transparent: true, opacity: 0.1 } )
 
+	let range = new THREE.Mesh( planeBuffer, planeShader );
+	range.position.set(0, 0, 1);
+	this.cone.add(range);
+
+	let dist = new THREE.Mesh( planeBuffer, planeShader );
+	dist.rotation.set( 0, Math.PI/2, 0);
+	this.cone.add(dist);
+
+	this.planes = {
+		angleHandler: range,
+		distHandler: dist
+	};
 
 	this.update();
 
@@ -131,33 +158,30 @@ function SpotLightHelper( light, color, camera, domElement = document ) {
 
 		let pointer = getPointer( event );
 
-		if ( this.dragging === true || ( pointer.button !== undefined && pointer.button !== 0 )) return;
+		if ( this.isDragging === true || ( pointer.button !== undefined && pointer.button !== 0 )) return;
 
 		ray.setFromCamera( pointer, this.camera );
 
-		var intersect = ray.intersectObjects( [this.angleHandle], true )[ 0 ] || false;
+		var intersect = ray.intersectObjects( [this.distHandle], true )[ 0 ] || false;
 
 		if ( intersect ) {
 
 			this.curHandle = intersect.object.name;
 
-
-			// this.handler.material.color.lerp( new THREE.Color( 1, 1, 1 ), 0.5 );
 		} else {
 
 			this.curHandle = null;
 
 		}
 
-
-		// console.log(pointer);
-
 	}
 
 	this.lastRange = null;
+	this.lastDistance = null;
+
 	let onPointerDown = ( event ) => {
 
-		if(this.curHandle === null) return;
+		if ( this.curHandle === null ) return;
 
 		event.preventDefault();
 		event.stopPropagation();
@@ -168,9 +192,19 @@ function SpotLightHelper( light, color, camera, domElement = document ) {
 
 		ray.setFromCamera( pointer, this.camera );
 
-		var intersect = ray.intersectObjects( [plane], true )[ 0 ] || false;
+		var intersect = ray.intersectObjects( [this.planes[this.curHandle]], true )[ 0 ] || false;
 
-		this.lastRange = intersect.point.distanceTo(this.light.target.position);
+		if ( intersect ) {
+
+			if ( this.curHandle === 'angleHandler' ) {
+
+				this.lastRange = intersect.point.distanceTo(this.light.target.position);
+
+			} else if ( this.curHandle === 'distHandler' ) {
+				this.lastDistance = intersect.point.x;
+			}
+
+		}
 
 	}
 
@@ -188,15 +222,27 @@ function SpotLightHelper( light, color, camera, domElement = document ) {
 
 		ray.setFromCamera( pointer, this.camera );
 
-		var intersect = ray.intersectObjects( [plane], true )[ 0 ] || false;
-		if( intersect ) {
+		var intersect = ray.intersectObjects( [this.planes[this.curHandle]], true )[ 0 ] || false;
+		if ( intersect ) {
 
-			let dis = intersect.point.distanceTo(this.light.target.position);
-			let delta = dis - this.lastRange;
+			if ( this.curHandle === 'angleHandler' ) {
 
-			this.light.angle += delta * 0.001;
+				let dis = intersect.point.distanceTo(this.light.target.position);
+				let delta = dis - this.lastRange;
 
-			this.lastRange = dis;
+				this.light.angle += delta * 0.1;
+
+				this.lastRange = dis;
+
+
+			} else if ( this.curHandle === 'distHandler' ) {
+				let dis = intersect.point.x;
+				let delta = dis - this.lastDistance;
+
+				this.light.distance -= delta * 1.0;
+
+				this.lastDistance = intersect.point.x;
+			}
 
 			this.dispatchEvent(changeEvent);
 
@@ -210,8 +256,6 @@ function SpotLightHelper( light, color, camera, domElement = document ) {
 
 		event.preventDefault(); // Prevent MouseEvent on mobile
 		this.isDragging = false;
-
-		// scope.pointerUp( getPointer( event ) );
 
 	}
 
