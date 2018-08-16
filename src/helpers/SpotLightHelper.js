@@ -61,11 +61,6 @@ function SpotLightHelper( light, color, camera, domElement = document ) {
 	this.add( this.cone );
 
 
-
-
-
-
-
 	// Add handlers
 
 	var angleHandlePositions = [
@@ -85,7 +80,7 @@ function SpotLightHelper( light, color, camera, domElement = document ) {
 	var distHandleGeometry = new BufferGeometry();
 	distHandleGeometry.addAttribute( 'position', new Float32BufferAttribute( distHandlePositions, 3 ));
 
-	this.distHandle = new THREE.Points( distHandleGeometry, handleMaterial );
+	this.controls = this.distHandle = new THREE.Points( distHandleGeometry, handleMaterial );
 	this.distHandle.name = 'distHandler';
 
 	// this.distHandle.add( this.angleHandle );
@@ -94,7 +89,7 @@ function SpotLightHelper( light, color, camera, domElement = document ) {
 	// this.angleHandle = new THREE.Points( angleHandleGeometry, angleHandleMaterial );
 	// this.angleHandle.name = 'angleHandler';
 
-	for(let pos of angleHandlePositions) {
+	for( let pos of angleHandlePositions ) {
 		let geom = new BufferGeometry();
 		geom.addAttribute( 'position', new Float32BufferAttribute( pos, 3 ));
 		let handle = new THREE.Points( geom, handleMaterial );
@@ -176,8 +171,8 @@ function SpotLightHelper( light, color, camera, domElement = document ) {
 
 	}
 
-	this.lastRange = null;
-	this.lastDistance = null;
+	let lastRange = null;
+	let lastDistance = null;
 
 	let onPointerDown = ( event ) => {
 
@@ -198,10 +193,10 @@ function SpotLightHelper( light, color, camera, domElement = document ) {
 
 			if ( this.curHandle === 'angleHandler' ) {
 
-				this.lastRange = intersect.point.distanceTo(this.light.target.position);
+				lastRange = intersect.point.distanceTo(this.light.target.position);
 
 			} else if ( this.curHandle === 'distHandler' ) {
-				this.lastDistance = intersect.point.x;
+				lastDistance = intersect.point.x;
 			}
 
 		}
@@ -228,20 +223,20 @@ function SpotLightHelper( light, color, camera, domElement = document ) {
 			if ( this.curHandle === 'angleHandler' ) {
 
 				let dis = intersect.point.distanceTo(this.light.target.position);
-				let delta = dis - this.lastRange;
+				let delta = dis - lastRange;
 
 				this.light.angle += delta * 0.1;
 
-				this.lastRange = dis;
+				lastRange = dis;
 
 
 			} else if ( this.curHandle === 'distHandler' ) {
 				let dis = intersect.point.x;
-				let delta = dis - this.lastDistance;
+				let delta = dis - lastDistance;
 
 				this.light.distance -= delta * 1.0;
 
-				this.lastDistance = intersect.point.x;
+				lastDistance = intersect.point.x;
 			}
 
 			this.dispatchEvent(changeEvent);
