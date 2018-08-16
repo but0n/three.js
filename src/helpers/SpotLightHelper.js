@@ -12,7 +12,7 @@ import { Float32BufferAttribute } from '../core/BufferAttribute.js';
 import { BufferGeometry } from '../core/BufferGeometry.js';
 import { PointsMaterial } from '../materials/PointsMaterial.js';
 
-function SpotLightHelper( light, color, camera, domElement = document ) {
+function SpotLightHelper( light, camera, domElement = document, color) {
 
 	Object3D.call( this );
 

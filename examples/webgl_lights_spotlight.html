@@ -94,7 +94,9 @@
 				spotLight.shadow.camera.far = 200;
 				scene.add( spotLight );
 
-				lightHelper = new THREE.SpotLightHelper( spotLight );
+				lightHelper = new THREE.SpotLightHelper( spotLight, camera, renderer.domElement );
+				lightHelper.addEventListener( 'change', render );
+
 				scene.add( lightHelper );
 
 				shadowCameraHelper = new THREE.CameraHelper( spotLight.shadow.camera );
