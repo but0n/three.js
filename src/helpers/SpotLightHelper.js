@@ -71,7 +71,7 @@ function SpotLightHelper( light, camera, domElement = document, color) {
 	];
 
 
-	var handleMaterial = new PointsMaterial( { color: 0xFFFF00, size: 6.0, sizeAttenuation: false } );
+	var handleMaterial = new PointsMaterial( { color: 0xFFFF00, size: 6.0, sizeAttenuation: false, depthTest: false, depthWrite: false } );
 
 
 	var distHandlePositions = [
@@ -81,6 +81,7 @@ function SpotLightHelper( light, camera, domElement = document, color) {
 	distHandleGeometry.addAttribute( 'position', new Float32BufferAttribute( distHandlePositions, 3 ));
 
 	this.controls = this.distHandle = new THREE.Points( distHandleGeometry, handleMaterial );
+	this.distHandle.renderOrder = 10000;
 	this.distHandle.name = 'distHandler';
 
 	// this.distHandle.add( this.angleHandle );
@@ -94,6 +95,7 @@ function SpotLightHelper( light, camera, domElement = document, color) {
 		geom.addAttribute( 'position', new Float32BufferAttribute( pos, 3 ));
 		let handle = new THREE.Points( geom, handleMaterial );
 		handle.name = 'angleHandler';
+		handle.renderOrder = 10000;
 
 		this.distHandle.add( handle );
 
@@ -238,7 +240,7 @@ function SpotLightHelper( light, camera, domElement = document, color) {
 
 				lastDistance = intersect.point.x;
 			}
-
+			this.update();
 			this.dispatchEvent(changeEvent);
 
 		}
@@ -312,8 +314,8 @@ SpotLightHelper.prototype.update = function () {
 
 		this.cone.scale.set( coneWidth, coneWidth, coneLength );
 
-		vector.setFromMatrixPosition( this.light.matrixWorld );
-		vector2.setFromMatrixPosition( this.light.target.matrixWorld );
+		vector.setFromMatrixPosition( this.light.matrix );
+		vector2.setFromMatrixPosition( this.light.target.matrix );
 
 		this.cone.lookAt( vector2.sub( vector ) );
 
