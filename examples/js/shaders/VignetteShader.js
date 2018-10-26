@@ -12,17 +12,19 @@ THREE.VignetteShader = {
 
 		"tDiffuse": { value: null },
 		"offset":   { value: 1.0 },
-		"darkness": { value: 1.0 }
+		"darkness": { value: 1.0 },
+		"off": { value: 0.0 }
 
 	},
 
 	vertexShader: [
 
 		"varying vec2 vUv;",
+		"uniform float off;",
 
 		"void main() {",
 
-			"vUv = uv;",
+			"vUv = uv + vec2(off, 0);",
 			"gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );",
 
 		"}"

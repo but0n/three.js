@@ -64,6 +64,7 @@
 
 		<script src="js/Detector.js"></script>
 		<script src="js/libs/stats.min.js"></script>
+		<script src="js/controls/OrbitControls.js"></script>
 
 		<script>
 
@@ -110,6 +111,9 @@
 				directionalLight = new THREE.DirectionalLight( 0xffffff );
 				directionalLight.position.set( 0, -0.1, 1 ).normalize();
 				sceneModel.add( directionalLight );
+				directionalLight2 = new THREE.DirectionalLight( 0xffeeff );
+				directionalLight2.position.set( 0, 1, -1 ).normalize();
+				sceneModel.add( directionalLight2 );
 
 				var loader = new THREE.JSONLoader();
 				loader.load( "models/json/leeperrysmith/LeePerrySmith.json", function( geometry ) {
@@ -169,7 +173,7 @@
 
 				var effectBleach = new THREE.ShaderPass( shaderBleach );
 				var effectSepia = new THREE.ShaderPass( shaderSepia );
-				var effectVignette = new THREE.ShaderPass( shaderVignette );
+				effectVignette = new THREE.ShaderPass( shaderVignette );
 				var effectCopy = new THREE.ShaderPass( shaderCopy );
 
 				effectBleach.uniforms[ "opacity" ].value = 0.95;
@@ -245,7 +249,7 @@
 
 				composer1.addPass( renderScene );
 				//composer1.addPass( renderMask );
-				composer1.addPass( effectFilmBW );
+				// composer1.addPass( effectFilmBW );
 				//composer1.addPass( clearMask );
 				composer1.addPass( effectVignette );
 
@@ -254,13 +258,13 @@
 				composer2 = new THREE.EffectComposer( renderer, new THREE.WebGLRenderTarget( rtWidth, rtHeight, rtParameters ) );
 
 				composer2.addPass( renderScene );
-				composer2.addPass( effectDotScreen );
-				composer2.addPass( renderMask );
-				composer2.addPass( effectColorify1 );
-				composer2.addPass( clearMask );
-				composer2.addPass( renderMaskInverse );
-				composer2.addPass( effectColorify2 );
-				composer2.addPass( clearMask );
+				// composer2.addPass( effectDotScreen );
+				// composer2.addPass( renderMask );
+				// composer2.addPass( effectColorify1 );
+				// composer2.addPass( clearMask );
+				// composer2.addPass( renderMaskInverse );
+				// composer2.addPass( effectColorify2 );
+				// composer2.addPass( clearMask );
 				composer2.addPass( effectVignette );
 
 				//
@@ -293,6 +297,23 @@
 				renderScene.uniforms[ "tDiffuse" ].value = composerScene.renderTarget2.texture;
 
 				window.addEventListener( 'resize', onWindowResize, false );
+
+				// controls
+
+				controls = new THREE.OrbitControls( cameraPerspective, renderer.domElement );
+
+				//controls.addEventListener( 'change', render ); // call this only in static scenes (i.e., if there is no animation loop)
+
+				controls.enableDamping = true; // an animation loop is required when either damping or auto-rotation are enabled
+				controls.dampingFactor = 0.25;
+
+				controls.screenSpacePanning = false;
+
+				controls.minDistance = 100;
+				// controls.maxDistance = 500
+
+
+
 
 			}
 
@@ -335,7 +356,18 @@
 
 			function createMesh( geometry, scene, scale ) {
 
-				var mat2 = new THREE.MeshPhongMaterial( {
+				mat3 = new THREE.MeshPhongMaterial( {
+
+					color: 0x999999,
+					specular: 0x080808,
+					shininess: 0,
+					// map: new THREE.TextureLoader().load( "models/json/leeperrysmith/Map-COL.jpg" ),
+					// normalMap: new THREE.TextureLoader().load("models/json/leeperrysmith/Infinite-Level_02_Tangent_SmoothUV.jpg" ),
+					// normalScale: new THREE.Vector2( 0.75, 0.75 )
+
+				} );
+
+				mat2 = new THREE.MeshPhongMaterial( {
 
 					color: 0x999999,
 					specular: 0x080808,
@@ -370,22 +402,35 @@
 
 				var time = Date.now() * 0.0004;
 
-				if ( mesh ) mesh.rotation.y = -time;
+				// if ( mesh ) mesh.rotation.y = -time;
+				controls.update(); // only required if controls.enableDamping = true, or if controls.autoRotate = true
 
+				mesh.material = mat3;
+				// console.log(mesh)
 				renderer.setViewport( 0, 0, halfWidth, halfHeight );
 				composerScene.render( delta );
 
-				renderer.setViewport( 0, 0, halfWidth, halfHeight );
+
+				effectVignette.uniforms[ "off" ].value = 0;
+
+
+				renderer.setViewport( 0, 0, halfWidth*2, halfHeight*2 );
 				composer1.render( delta );
 
-				renderer.setViewport( halfWidth, 0, halfWidth, halfHeight );
+
+				mesh.material = mat2;
+				renderer.setViewport( 0, 0, halfWidth, halfHeight );
+				composerScene.render( delta );
+
+				effectVignette.uniforms[ "off" ].value = 0.5;
+				renderer.setViewport( halfWidth, 0, halfWidth*2, halfHeight*2 );
 				composer2.render( delta );
 
-				renderer.setViewport( 0, halfHeight, halfWidth, halfHeight );
-				composer3.render( delta );
+				// renderer.setViewport( 0, halfHeight, halfWidth, halfHeight );
+				// composer3.render( delta );
 
-				renderer.setViewport( halfWidth, halfHeight, halfWidth, halfHeight );
-				composer4.render( delta );
+				// renderer.setViewport( halfWidth, halfHeight, halfWidth, halfHeight );
+				// composer4.render( delta );
 
 			}
 

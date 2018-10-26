@@ -167,7 +167,7 @@
 
 				var renderer = new THREE.WebGLRenderer({ antialias: true, logarithmicDepthBuffer: logDepthBuf });
 				renderer.setPixelRatio( window.devicePixelRatio );
-				renderer.setSize(SCREEN_WIDTH/2, SCREEN_HEIGHT);
+				// renderer.setSize(SCREEN_WIDTH/2, SCREEN_HEIGHT);
 				renderer.domElement.style.position = "relative";
 				renderer.domElement.id = 'renderer_' + name;
 				framecontainer.appendChild(renderer.domElement);
@@ -247,14 +247,14 @@
 				screensplit_right = 1 - screensplit;
 
 				objects.normal.renderer.setSize( screensplit * SCREEN_WIDTH, SCREEN_HEIGHT );
-				objects.normal.camera.aspect = screensplit * SCREEN_WIDTH / SCREEN_HEIGHT;
-				objects.normal.camera.updateProjectionMatrix();
+				// objects.normal.camera.aspect = screensplit * SCREEN_WIDTH / SCREEN_HEIGHT;
+				// objects.normal.camera.updateProjectionMatrix();
 				objects.normal.camera.setViewOffset( SCREEN_WIDTH, SCREEN_HEIGHT, 0, 0, SCREEN_WIDTH * screensplit, SCREEN_HEIGHT );
 				objects.normal.container.style.width = (screensplit * 100) + '%';
 
 				objects.logzbuf.renderer.setSize( screensplit_right * SCREEN_WIDTH, SCREEN_HEIGHT );
-				objects.logzbuf.camera.aspect = screensplit_right * SCREEN_WIDTH / SCREEN_HEIGHT;
-				objects.logzbuf.camera.updateProjectionMatrix();
+				// objects.logzbuf.camera.aspect = screensplit_right * SCREEN_WIDTH / SCREEN_HEIGHT;
+				// objects.logzbuf.camera.updateProjectionMatrix();
 				objects.logzbuf.camera.setViewOffset( SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_WIDTH * screensplit, 0, SCREEN_WIDTH * screensplit_right, SCREEN_HEIGHT );
 				objects.logzbuf.container.style.width = (screensplit_right * 100) + '%';
 
@@ -328,10 +328,10 @@
 				window.removeEventListener("mousemove", onBorderMouseMove);
 				window.removeEventListener("mouseup", onBorderMouseUp);
 			}
-			function onMouseMove(ev) {
-				mouse[0] = ev.clientX / window.innerWidth;
-				mouse[1] = ev.clientY / window.innerHeight;
-			}
+			// function onMouseMove(ev) {
+			// 	mouse[0] = ev.clientX / window.innerWidth;
+			// 	mouse[1] = ev.clientY / window.innerHeight;
+			// }
 			function onMouseWheel(ev) {
 				var amount = ev.deltaY;
 				if ( amount === 0 ) return;
