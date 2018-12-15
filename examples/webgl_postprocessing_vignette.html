@@ -62,9 +62,8 @@
 		<script src="js/shaders/CopyShader.js"></script>
 		<script src="js/shaders/DigitalGlitch.js"></script>
 
-		<script src="js/postprocessing/VignettePass.js"></script>
+		<script src="js/postprocessing/SharpenPass.js"></script>
 		<script src="js/postprocessing/ChromaticPass.js"></script>
-		<script src="js/shaders/VignetteShader.js"></script>
 
 
 		<script>
@@ -87,6 +86,8 @@
 				scene = new THREE.Scene();
 				scene.fog = new THREE.Fog( 0x000000, 1, 1000 );
 
+				let directionalLight = new THREE.DirectionalLight( 0xffffff, 0.5 );
+				scene.add( directionalLight );
 				// envmap
 				var path = 'textures/cube/skybox/';
 				var format = '.jpg';
@@ -131,7 +132,7 @@
 
 				composer = new THREE.EffectComposer( renderer );
 				composer.addPass( new THREE.RenderPass( scene, camera ) );
-				mypass = new THREE.VignettePass();
+				mypass = new THREE.SharpenPass();
 				// mypass.renderToScreen = true;
 				composer.addPass( mypass );
 
@@ -141,9 +142,7 @@
 
 
 				var params = {
-					Vignetting: 0,
-					Hardness: 0,
-					chromaticAberration: 0
+					Sharpness: 0,
 				};
 
 				window.addEventListener( 'resize', onWindowResize, false );
@@ -151,16 +150,8 @@
 
 				var gui = new dat.GUI();
 
-				gui.add( params, 'Vignetting', 0, 1 ).step( 0.01 ).onChange( function ( value ) {
-					mypass.vignetting = Number( value );
-					animate();
-				} );
-				gui.add( params, 'Hardness', 0, 100 ).step( 0.01 ).onChange( function ( value ) {
-					mypass.hardness = Number( value );
-					animate();
-				} );
-				gui.add( params, 'chromaticAberration', 0, 100 ).step( 0.01 ).onChange( function ( value ) {
-					chr.chromaticAberration = Number( value );
+				gui.add( params, 'Sharpness', 0, 5 ).step( 0.01 ).onChange( function ( value ) {
+					mypass.sharpness = Number( value/5 );
 					animate();
 				} );
 

@@ -9,7 +9,7 @@ THREE.VignettePass = function () {
 	this.material = this.getVignettingMaterial();
 
 	this.camera = new THREE.OrthographicCamera( - 1, 1, 1, - 1, 0, 1 );
-	this.scene  = new THREE.Scene();
+	this.scene = new THREE.Scene();
 
 	this.quad = new THREE.Mesh( new THREE.PlaneBufferGeometry( 2, 2 ), null );
 	this.scene.add( this.quad );
@@ -27,7 +27,7 @@ THREE.VignettePass.prototype = Object.assign( Object.create( THREE.Pass.prototyp
 
 		this.material.uniforms[ "tDiffuse" ].value = readBuffer.texture;
 		this.material.uniforms[ "uVignetting" ].value = 1.0 / ( 1.0 - this.vignetting ) - 1.0;
-		this.material.uniforms[ "uHardness" ].value = 100/(100-this.hardness);
+		this.material.uniforms[ "uHardness" ].value = 100 / ( 100 - this.hardness );
 
 		this.quad.material = this.material;
 
@@ -44,6 +44,7 @@ THREE.VignettePass.prototype = Object.assign( Object.create( THREE.Pass.prototyp
 	},
 
 	getVignettingMaterial: function () {
+
 		return new THREE.ShaderMaterial( {
 
 			defines: {
